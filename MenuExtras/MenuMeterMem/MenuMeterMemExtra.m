@@ -62,6 +62,8 @@
 #define kUsageTitle							@"Memory Usage:"
 #define kPageStatsTitle						@"Memory Pages:"
 #define kVMStatsTitle						@"VM Statistics:"
+#define kMemPressureTitle                                       @"Memory Pressure:"
+#define kMemPressureFormat                                      @"%@%%\t(level %@)"
 #define kSwapStatsTitle						@"Swap Files:"
 #define kUsageFormat						@"%@ used, %@ free, %@ total"
 #define kActiveWiredFormat					@"%@ active, %@ wired"
@@ -88,9 +90,10 @@
 
 @implementation MenuMeterMemExtra
 
-- initWithBundle:(NSBundle *)bundle {
+- init {
 
-	self = [super initWithBundle:bundle];
+    self = [super initWithBundleID:kMemMenuBundleID];
+    NSBundle*bundle=[NSBundle mainBundle];
 	if (!self) {
 		return nil;
 	}
@@ -152,6 +155,14 @@
 	menuItem = (NSMenuItem *)[extraMenu addItemWithTitle:@"" action:nil keyEquivalent:@""];
 	[menuItem setEnabled:NO];
 
+        // add items for memory pressure
+        menuItem = (NSMenuItem *)[extraMenu addItemWithTitle:[bundle localizedStringForKey:kMemPressureTitle value:nil table:nil]
+                                                  action:nil
+                                           keyEquivalent:@""];
+        [menuItem setEnabled:NO];
+        menuItem = (NSMenuItem *)[extraMenu addItemWithTitle:@"" action:nil keyEquivalent:@""];
+        [menuItem setEnabled:NO];
+
 	// Swap file stats menu item and placeholders
 	menuItem = (NSMenuItem *)[extraMenu addItemWithTitle:[bundle localizedStringForKey:kSwapStatsTitle value:nil table:nil]
 												  action:nil
@@ -163,52 +174,10 @@
 	[menuItem setEnabled:NO];
 	menuItem = (NSMenuItem *)[extraMenu addItemWithTitle:@"" action:nil keyEquivalent:@""];
 	[menuItem setEnabled:NO];
+    [extraMenu addItem:[NSMenuItem separatorItem]];
+    [self addStandardMenuEntriesTo:extraMenu];
 
-	// Get our view
-    extraView = [[MenuMeterMemView alloc] initWithFrame:[[self view] frame] menuExtra:self];
-	if (!extraView) {
-		return nil;
-	}
-    [self setView:extraView];
 
-	// Load localized strings
-	localizedStrings = [NSDictionary dictionaryWithObjectsAndKeys:
-							[[NSBundle bundleForClass:[self class]] localizedStringForKey:kUsageFormat value:nil table:nil],
-							kUsageFormat,
-							[[NSBundle bundleForClass:[self class]] localizedStringForKey:kActiveWiredFormat value:nil table:nil],
-							kActiveWiredFormat,
-							[[NSBundle bundleForClass:[self class]] localizedStringForKey:kInactiveFreeFormat value:nil table:nil],
-							kInactiveFreeFormat,
-							[[NSBundle bundleForClass:[self class]] localizedStringForKey:kCompressedFormat value:nil table:nil],
-							kCompressedFormat,
-							[[NSBundle bundleForClass:[self class]] localizedStringForKey:kVMPagingFormat value:nil table:nil],
-							kVMPagingFormat,
-							[[NSBundle bundleForClass:[self class]] localizedStringForKey:kVMCacheFormat value:nil table:nil],
-							kVMCacheFormat,
-							[[NSBundle bundleForClass:[self class]] localizedStringForKey:kVMFaultCopyOnWriteFormat value:nil table:nil],
-							kVMFaultCopyOnWriteFormat,
-							[[NSBundle bundleForClass:[self class]] localizedStringForKey:kSingleSwapFormat value:nil table:nil],
-							kSingleSwapFormat,
-							[[NSBundle bundleForClass:[self class]] localizedStringForKey:kMultiSwapFormat value:nil table:nil],
-							kMultiSwapFormat,
-							[[NSBundle bundleForClass:[self class]] localizedStringForKey:kMaxSingleSwapFormat value:nil table:nil],
-							kMaxSingleSwapFormat,
-							[[NSBundle bundleForClass:[self class]] localizedStringForKey:kMaxMultiSwapFormat value:nil table:nil],
-							kMaxMultiSwapFormat,
-							[[NSBundle bundleForClass:[self class]] localizedStringForKey:kSingleEncryptedSwapFormat value:nil table:nil],
-							kSingleEncryptedSwapFormat,
-							[[NSBundle bundleForClass:[self class]] localizedStringForKey:kMultiEncryptedSwapFormat value:nil table:nil],
-							kMultiEncryptedSwapFormat,
-							[[NSBundle bundleForClass:[self class]] localizedStringForKey:kSwapSizeFormat value:nil table:nil],
-							kSwapSizeFormat,
-							[[NSBundle bundleForClass:[self class]] localizedStringForKey:kSwapSizeUsedFormat value:nil table:nil],
-							kSwapSizeUsedFormat,
-							[[NSBundle bundleForClass:[self class]] localizedStringForKey:kMBLabel value:nil table:nil],
-							kMBLabel,
-							nil];
-	if (!localizedStrings) {
-		return nil;
-	}
 
 	// Set up a NumberFormatter for localization. This is based on code contributed by Mike Fischer
 	// (mike.fischer at fi-works.de) for use in MenuMeters.
@@ -228,16 +197,6 @@
 		return nil;
 	}
 
-	// Register for pref changes
-	[[NSDistributedNotificationCenter defaultCenter] addObserver:self
-														selector:@selector(configFromPrefs:)
-															name:kMemMenuBundleID
-														  object:kPrefChangeNotification];
-	// Register for 10.10 theme changes
-	[[NSDistributedNotificationCenter defaultCenter] addObserver:self
-														selector:@selector(configFromPrefs:)
-															name:kAppleInterfaceThemeChangedNotification
-														  object:nil];
 
 	// And configure directly from prefs on first load
 	[self configFromPrefs:nil];
@@ -248,22 +207,6 @@
 
 } // initWithBundle
 
-- (void)willUnload {
-
-	// Unregister pref change notifications
-	[[NSDistributedNotificationCenter defaultCenter] removeObserver:self
-															   name:nil
-															 object:nil];
-
-	// Let the pref panel know we have been removed
-	[[NSDistributedNotificationCenter defaultCenter] postNotificationName:kMemMenuBundleID
-																   object:kMemMenuUnloadNotification];
-
-	// Let super do the rest
-    [super willUnload];
-
-} // willUnload
-
  // dealloc
 
 ///////////////////////////////////////////////////////////////
@@ -273,10 +216,11 @@
 ///////////////////////////////////////////////////////////////
 
 - (NSImage *)image {
+        [self setupAppearance];
 
 	// Image to render into (and return to view)
 	NSImage *currentImage = [[NSImage alloc] initWithSize:NSMakeSize(menuWidth,
-																	  [extraView frame].size.height - 1)];
+																	  self.height - 1)];
 
 	// Don't render without data
 	if (![memHistory count]) return nil;
@@ -297,7 +241,11 @@
       }
 			break;
 		case kMemDisplayGraph:
-			[self renderMemHistoryIntoImage:currentImage];
+                if([ourPrefs memPressure]){
+                    [self renderPressureHistoryIntoImage:currentImage];
+                }else{
+                    [self renderMemHistoryIntoImage:currentImage];
+                }
 	}
 	if ([ourPrefs memPageIndicator]) {
 		[self renderPageIndicatorIntoImage:currentImage];
@@ -389,14 +337,16 @@
 					[prettyIntFormatter stringForObjectValue:[currentMemStats objectForKey:@"pageouts"]]]];
 	LiveUpdateMenuItemTitle(extraMenu, kMemVMPageInfoMenuIndex, title);
 	// VM cache
+	const double divisor = [[currentMemStats objectForKey:@"lookups"] doubleValue];
 	title = [NSString stringWithFormat:kMenuIndentFormat,
 				[NSString stringWithFormat:[localizedStrings objectForKey:kVMCacheFormat],
 					[prettyIntFormatter stringForObjectValue:[currentMemStats objectForKey:@"lookups"]],
 					[prettyIntFormatter stringForObjectValue:[currentMemStats objectForKey:@"hits"]],
 					[percentFormatter stringForObjectValue:
 						[NSNumber numberWithDouble:
-							(double)(([[currentMemStats objectForKey:@"hits"] doubleValue] /
-									  [[currentMemStats objectForKey:@"lookups"] doubleValue]) * 100.0)]]]];
+                            divisor == 0.0 ? 0.0 :
+                            (double)(([[currentMemStats objectForKey:@"hits"] doubleValue] /
+									  divisor) * 100.0)]]]];
 	LiveUpdateMenuItemTitle(extraMenu, kMemVMCacheInfoMenuIndex, title);
 	// VM fault
 	title = [NSString stringWithFormat:kMenuIndentFormat,
@@ -404,11 +354,16 @@
 					[prettyIntFormatter stringForObjectValue:[currentMemStats objectForKey:@"faults"]],
 					[prettyIntFormatter stringForObjectValue:[currentMemStats objectForKey:@"cowfaults"]]]];
 	LiveUpdateMenuItemTitle(extraMenu, kMemVMFaultInfoMenuIndex, title);
+    
+        title=[NSString stringWithFormat:kMenuIndentFormat,
+               [NSString stringWithFormat:[localizedStrings objectForKey:kMemPressureFormat],[currentMemStats objectForKey:@"mempress"],[currentMemStats objectForKey:@"mempresslevel"]]];
+        LiveUpdateMenuItemTitle(extraMenu, kMemMemPressureInfoMenuIndex, title);
+    
 	// Swap count/path, Tiger swap encryptioninfo from Michael Nordmeyer (http://goodyworks.com)
 	if ([[currentSwapStats objectForKey:@"swapencrypted"] boolValue]) {
 		title = [NSString stringWithFormat:kMenuIndentFormat,
 					[NSString stringWithFormat:
-						(([[currentSwapStats objectForKey:@"swapcount"] unsignedIntValue] > 1) ?
+						(([[currentSwapStats objectForKey:@"swapcount"] unsignedIntValue] != 1) ?
 							[localizedStrings objectForKey:kMultiEncryptedSwapFormat] :
 							[localizedStrings objectForKey:kSingleEncryptedSwapFormat]),
 						[prettyIntFormatter stringForObjectValue:[currentSwapStats objectForKey:@"swapcount"]],
@@ -418,7 +373,7 @@
 	// Swap max
 	title = [NSString stringWithFormat:kMenuIndentFormat,
 				[NSString stringWithFormat:
-					(([[currentSwapStats objectForKey:@"swapcountpeak"] unsignedIntValue] > 1) ?
+					(([[currentSwapStats objectForKey:@"swapcountpeak"] unsignedIntValue] != 1) ?
 						[localizedStrings objectForKey:kMaxMultiSwapFormat] :
 						[localizedStrings objectForKey:kMaxSingleSwapFormat]),
 					[prettyIntFormatter stringForObjectValue:[currentSwapStats objectForKey:@"swapcountpeak"]]]];
@@ -513,12 +468,8 @@
 	[renderPath fill];
 	totalArc += inactiveMB / totalMB;
 
-	// Finish arc with black or gray
-	if (IsMenuMeterMenuBarDarkThemed()) {
-		[[NSColor darkGrayColor] set];		
-	} else {
-		[[NSColor blackColor] set];
-	}
+	// Finish arc with the default color
+        [[fgMenuThemeColor colorWithAlphaComponent:kBorderAlpha] set];
 
 	// Close the circle if needed
 	if (totalArc < 1) {
@@ -558,7 +509,7 @@
 																		usedMB,
 																		[localizedStrings objectForKey:kMBLabel]]
 														attributes:[NSDictionary dictionaryWithObjectsAndKeys:
-																		[NSFont systemFontOfSize:9.5f], NSFontAttributeName,
+                                                                    [NSFont monospacedDigitSystemFontOfSize:9.5f weight:NSFontWeightRegular], NSFontAttributeName,
 																		usedColor, NSForegroundColorAttributeName,
 																		nil]];
 	// Construct and draw the free string
@@ -567,7 +518,7 @@
 																		freeMB,
 																		[localizedStrings objectForKey:kMBLabel]]
 														attributes:[NSDictionary dictionaryWithObjectsAndKeys:
-																		[NSFont systemFontOfSize:9.5f], NSFontAttributeName,
+                                                                    [NSFont monospacedDigitSystemFontOfSize:9.5f weight:NSFontWeightRegular], NSFontAttributeName,
 																		freeColor, NSForegroundColorAttributeName,
 																		nil]];
 
@@ -591,7 +542,7 @@
   float pressure = 0.2f;
   NSDictionary *currentMemStats = [memHistory objectAtIndex:0];
   if (currentMemStats) {
-    pressure = [[currentMemStats objectForKey:@"mempress"] floatValue];
+    pressure = [[currentMemStats objectForKey:@"mempress"] intValue] / 100.0f;
   }
   
   if (pressure < 0) { pressure = 0; };
@@ -607,11 +558,8 @@
   [activeColor set];
   [pressurePath fill];
   
-  if (IsMenuMeterMenuBarDarkThemed()) {
-    [[NSColor darkGrayColor] set];
-  } else {
-    [fgMenuThemeColor set];
-  }
+  [[fgMenuThemeColor colorWithAlphaComponent:kBorderAlpha] set];
+
   [framePath stroke];
   
   // Reset
@@ -662,11 +610,7 @@
 	[activePath fill];
 	[wireColor set];
 	[wirePath fill];
-	if (IsMenuMeterMenuBarDarkThemed()) {
-		[[NSColor darkGrayColor] set];
-	} else {
-		[fgMenuThemeColor set];
-	}
+        [[fgMenuThemeColor colorWithAlphaComponent:kBorderAlpha] set];
 	[framePath stroke];
 
 	// Reset
@@ -674,6 +618,51 @@
 	[image unlockFocus];
 
 } // renderBarIntoImage
+
+- (void)renderPressureHistoryIntoImage:(NSImage *)image {
+
+    // Construct paths
+    NSBezierPath *activePath =  [NSBezierPath bezierPath];
+
+    // Position for initial offset
+    [activePath moveToPoint:NSMakePoint(0, 0)];
+
+    // Loop over pixels in desired width until we're out of data
+    int renderPosition = 0;
+    // Graph height does not include baseline, reserve the space for real data
+    // since memory usage can never be zero.
+    float renderHeight = (float)[image size].height;
+     for (renderPosition = 0; renderPosition < [ourPrefs memGraphLength]; renderPosition++) {
+
+        // No data at this position?
+        if (renderPosition >= [memHistory count]) break;
+
+        // Grab data
+        NSDictionary *memData = [memHistory objectAtIndex:renderPosition];
+        if (!memData) continue;
+        int pressure = [[memData objectForKey:@"mempress"] intValue];
+        if (pressure < 0) { pressure = 0; };
+        if (pressure > 100) { pressure = 100; };
+
+        // Update paths (adding baseline)
+        [activePath lineToPoint:NSMakePoint(renderPosition,
+                                          pressure / 100.f * renderHeight)];
+    }
+
+    // Return to lower edge (fill will close the graph)
+    [activePath lineToPoint:NSMakePoint(renderPosition - 1, 0)];
+
+
+    // Render the graph
+    [image lockFocus];
+    [activeColor set];
+    [activePath fill];
+
+    // Clean up
+    [[NSColor blackColor] set];
+    [image unlockFocus];
+
+} // renderMemHistoryIntoImages
 
 - (void)renderMemHistoryIntoImage:(NSImage *)image {
 
@@ -768,7 +757,7 @@
 	[image lockFocus];
 	float indicatorHeight = (float)[image size].height;
 	
-	BOOL darkTheme = IsMenuMeterMenuBarDarkThemed();
+	BOOL darkTheme = self.isDark;
 
 	// Set up the pageout path
 	NSBezierPath *arrow = [NSBezierPath bezierPath];
@@ -816,7 +805,7 @@
 	NSAttributedString *renderString = [[NSAttributedString alloc]
 											initWithString:countString
 												attributes:[NSDictionary dictionaryWithObjectsAndKeys:
-																[NSFont systemFontOfSize:9.5f], NSFontAttributeName,
+                                                            [NSFont monospacedDigitSystemFontOfSize:9.5f weight:NSFontWeightRegular], NSFontAttributeName,
 																fgMenuThemeColor, NSForegroundColorAttributeName,
 																nil]];
 	// Using NSParagraphStyle to right align clipped weird, so do it manually
@@ -889,17 +878,17 @@
 	[ourPrefs syncWithDisk];
 
 	// Handle menubar theme changes
-	fgMenuThemeColor = MenuItemTextColor();
+        fgMenuThemeColor = self.menuBarTextColor;
 	
 	// Cache colors to skip archive cycle from prefs
-	freeColor = [ourPrefs memFreeColor];
-	usedColor = [ourPrefs memUsedColor];
-	activeColor = [ourPrefs memActiveColor];
-	inactiveColor = [ourPrefs memInactiveColor];
-	wireColor = [ourPrefs memWireColor];
-	compressedColor = [ourPrefs memCompressedColor];
-	pageInColor = [ourPrefs memPageInColor];
-	pageOutColor = [ourPrefs memPageOutColor];
+        freeColor = [self colorByAdjustingForLightDark:[ourPrefs memFreeColor]];
+        usedColor = [self colorByAdjustingForLightDark:[ourPrefs memUsedColor]];
+        activeColor = [self colorByAdjustingForLightDark:[ourPrefs memActiveColor]];
+        inactiveColor = [self colorByAdjustingForLightDark:[ourPrefs memInactiveColor]];
+        wireColor = [self colorByAdjustingForLightDark:[ourPrefs memWireColor]];
+        compressedColor = [self colorByAdjustingForLightDark:[ourPrefs memCompressedColor]];
+        pageInColor = [self colorByAdjustingForLightDark:[ourPrefs memPageInColor]];
+        pageOutColor = [self colorByAdjustingForLightDark:[ourPrefs memPageOutColor]];
 
 	// Since text rendering is so CPU intensive we minimize this by
 	// prerendering what we can if we need it
@@ -910,8 +899,8 @@
 																			   value:nil
 																			   table:nil]
 												attributes:[NSDictionary dictionaryWithObjectsAndKeys:
-																[NSFont systemFontOfSize:9.5f], NSFontAttributeName,
-																[ourPrefs memUsedColor], NSForegroundColorAttributeName,
+                                                            [NSFont monospacedDigitSystemFontOfSize:9.5f weight:NSFontWeightRegular], NSFontAttributeName,
+																usedColor, NSForegroundColorAttributeName,
 																nil]];
 	NSAttributedString *renderFString = [[NSAttributedString alloc]
 											initWithString:[[NSBundle bundleForClass:[self class]]
@@ -919,15 +908,15 @@
 																				value:nil
 																				table:nil]
 												attributes:[NSDictionary dictionaryWithObjectsAndKeys:
-																[NSFont systemFontOfSize:9.5f], NSFontAttributeName,
-																[ourPrefs memFreeColor], NSForegroundColorAttributeName,
+                                                            [NSFont monospacedDigitSystemFontOfSize:9.5f weight:NSFontWeightRegular], NSFontAttributeName,
+																freeColor, NSForegroundColorAttributeName,
 																nil]];
 	if ([renderUString size].width > [renderFString size].width) {
 		numberLabelPrerender = [[NSImage alloc] initWithSize:NSMakeSize([renderUString size].width,
-																		[extraView frame].size.height - 1)];
+                                                                        self.height-1)];
 	} else {
 		numberLabelPrerender = [[NSImage alloc] initWithSize:NSMakeSize([renderFString size].width,
-																		[extraView frame].size.height - 1)];
+                                                                        self.height-1)];
 	}
 	[numberLabelPrerender lockFocus];
 	// No descenders so render both lines lower than normal
@@ -941,7 +930,7 @@
 		NSAttributedString *renderMBString =  [[NSAttributedString alloc]
 													initWithString:[localizedStrings objectForKey:kMBLabel]
 														attributes:[NSDictionary dictionaryWithObjectsAndKeys:
-																		[NSFont systemFontOfSize:9.5f], NSFontAttributeName,
+                                                                    [NSFont monospacedDigitSystemFontOfSize:9.5f weight:NSFontWeightRegular], NSFontAttributeName,
 																		nil]];
 		mbLength = (float)ceil([renderMBString size].width);
 	}
@@ -981,12 +970,9 @@
 		menuWidth += kMemPagingDisplayWidth + kMemPagingDisplayGapWidth;
 	}
 
-	// Resize the view
-	[extraView setFrameSize:NSMakeSize(menuWidth, [extraView frame].size.height)];
-	[self setLength:menuWidth];
 
 	// Force initial update
-	[self timerFired:nil];
+    statusItem.button.image=self.image;
 } // configFromPrefs
 
 @end

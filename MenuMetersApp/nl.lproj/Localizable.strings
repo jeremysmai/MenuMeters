@@ -1,3 +1,4 @@
+"Open MenuMeters preferences" = "Open MenuMeters preferences";
 //	In the interest of improving localizability most strings in MenuMeters
 //	are exposed as NSString format strings, including the %1$, %2$ parameter placement
 //	convention. If localization requires different ordering of the parameters you
@@ -32,6 +33,10 @@
 
 // Format string for tasks and threads
 "%d tasks, %d threads" = "%1$d taken, %2$d threads";
+
+// Core count / hyperthreading format strings
+" (%@ hyperthreads per core)" = " (%@ hyperthreads per core)";
+"%@%@ physical cores" = "%@%@ physical cores";
 
 // Load average title
 "Load Average (1m, 5m, 15m):" = "Load Average (1m, 5m, 15m):";

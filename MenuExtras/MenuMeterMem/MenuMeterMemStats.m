@@ -22,6 +22,8 @@
 //
 
 #import "MenuMeterMemStats.h"
+#include <sys/sysctl.h>
+#include <sys/syscall.h>
 
 ///////////////////////////////////////////////////////////////
 //
@@ -248,12 +250,12 @@ static host_statistics64_Ptr host_statistics64_Impl = NULL;
 	// Update total
 	totalRAM = active + inactive + wired + free + compressed;
 
-  int system_memory_pressure;
+  int memory_pressure_level;
   size_t length = sizeof(int);
   
-  sysctlbyname("kern.memorystatus_vm_pressure_level", &system_memory_pressure, &length, nil, 0);
-  
-  double memory_pressure = system_memory_pressure * 0.25f;
+  sysctlbyname("kern.memorystatus_vm_pressure_level", &memory_pressure_level, &length, nil, 0);
+
+    int memory_pressure=[self memPressure];
   
 	return [NSDictionary dictionaryWithObjectsAndKeys:
 				[NSNumber numberWithDouble:(double)totalRAM / 1048576], @"totalmb",
@@ -282,7 +284,8 @@ static host_statistics64_Ptr host_statistics64_Impl = NULL;
 				[NSNumber numberWithUnsignedLongLong:vmStats64.compressions], @"compressions",
 				[NSNumber numberWithUnsignedLongLong:deltaPageIn], @"deltapageins",
 				[NSNumber numberWithUnsignedLongLong:deltaPageOut], @"deltapageouts",
-        [NSNumber numberWithDouble:(double)memory_pressure], @"mempress",
+        [NSNumber numberWithInt:memory_pressure], @"mempress",
+                [NSNumber numberWithInt:memory_pressure_level], @"mempresslevel",
 				nil];
 } // memStats64
 
@@ -362,7 +365,11 @@ static host_statistics64_Ptr host_statistics64_Impl = NULL;
 ///////////////////////////////////////////////////////////////
 
 - (void)initializeSwapPath {
-
+/* this code seems to cause hangs for some users.
+   in any case, dynamic_pager is launched on demand from long time ago, and
+   you can't get the changed swap file path in this method, as far as I understand.
+   the rest is kept for historical interest.
+   this should fix https://github.com/yujitach/MenuMeters/issues/124 .
 	// We need to figure out where the swap file is. This information
 	// is not published by dynamic_pager to sysctl. We can't get dynamic_pager's
 	// arg list directed using sysctl because its UID 0. So we have to do some
@@ -421,10 +428,34 @@ static host_statistics64_Ptr host_statistics64_Impl = NULL;
 	}
 	else {
 		NSLog(@"MenuMeterMemStats unable to locate dynamic_pager args. Assume default.");
+ */
+    // and now we provide a modern code to get the info via sysctl.
+    // Apparently there are still people who changes the swap file path... see
+    // https://github.com/yujitach/MenuMeters/issues/164
+    char swapfileprefix[1024];
+    size_t size = sizeof(swapfileprefix);
+    if (!sysctlbyname("vm.swapfileprefix", swapfileprefix, &size, NULL, 0)){
+        NSString*x=[NSString stringWithUTF8String:swapfileprefix];
+        swapPrefix=[x lastPathComponent];
+        swapPath=[[x stringByDeletingLastPathComponent] stringByAppendingString:@"/"];
+    }else{
 		swapPath = kDefaultSwapPath;
 		swapPrefix = kDefaultSwapPrefix;
-	}
+    }
 
 } // initializeSwapPath
 
+- (int)memPressure
+{
+    // taken from https://github.com/tramdas/memstatpoller/blob/38fbb15efc9b28db508d21ef557c89b4b29fd94e/main.c#L95
+    int error;
+    int level=0;
+    // This is how AAPL's memory_pressure tool reports "System-wide memory free percentage":
+    //error = memorystatus_get_level((user_addr_t) level);
+    error = syscall(SYS_memorystatus_get_level, &level);
+    if(error){
+        NSLog(@"memorystatus_get_level failed: error=%@ errorno=%@ (%s)",@(error),@(errno),strerror(errno));
+    }
+    return level;
+}
 @end

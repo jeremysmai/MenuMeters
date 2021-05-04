@@ -23,11 +23,9 @@
 
 #import <Cocoa/Cocoa.h>
 #import <Carbon/Carbon.h>
-#import "AppleUndocumented.h"
 #import "MenuMeters.h"
 #import "MenuMeterDefaults.h"
 #import "MenuMeterMem.h"
-#import "MenuMeterMemView.h"
 #import "MenuMeterMemStats.h"
 #import "MenuMeterWorkarounds.h"
 
@@ -36,13 +34,10 @@
 
 	// Menu Extra necessities
 	NSMenu 							*extraMenu;
-    MenuMeterMemView 				*extraView;
 	// Pref object
 	MenuMeterDefaults				*ourPrefs;
 	// Info gathers
 	MenuMeterMemStats				*memStats;
-	// Localized strings
-	NSDictionary					*localizedStrings;
 	// Formatters for numbers so we get localization correctly
 	NSNumberFormatter				*memFloatMBFormatter,
 									*memIntMBFormatter,

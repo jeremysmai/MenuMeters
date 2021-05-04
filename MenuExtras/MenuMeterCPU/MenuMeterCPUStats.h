@@ -29,6 +29,7 @@
 #import <mach/mach.h>
 #import <mach/mach_error.h>
 #import "MenuMeterCPU.h"
+#import "LocalizedStrings.h"
 
 @interface MenuMeterCPULoad : NSObject
 @property(nonatomic) double system;
@@ -47,8 +48,6 @@
 	processor_set_name_port_t			processorSet;
 	// Previous processor tick data
 	processor_cpu_load_info_t 			priorCPUTicks;
-	// Localized string dictionary
-	NSDictionary						*localizedStrings;
 	// Localized float display
 	NSNumberFormatter					*twoDigitFloatFormatter;
 
@@ -57,12 +56,16 @@
 // CPU info
 - (NSString *)cpuName;
 - (NSString *)cpuSpeed;
-- (uint32_t)numberOfCPUsByCombiningLowerHalf:(BOOL)combineLowerHalf;
+- (uint32_t)numberOfCPUs;
+- (uint32_t)numberOfCores;
 - (NSString *)processorDescription;
+- (NSString *)coreDescription;
 
 // Load info
 - (NSString *)currentProcessorTasks;
 - (NSString *)loadAverage;
-- (NSArray *)currentLoadBySorting:(BOOL)sorted andCombineLowerHalf:(BOOL)combine;
+- (NSArray *)currentLoadBySorting:(BOOL)sorted;
+- (float_t)cpuProximityTemperature;
+- (NSString*)cpuPowerLimitStatus;
 
 @end

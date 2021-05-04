@@ -50,9 +50,9 @@
 
 @implementation MenuMeterDiskExtra
 
-- initWithBundle:(NSBundle *)bundle {
+- init {
 
-	self = [super initWithBundle:bundle];
+    self = [super initWithBundleID:kDiskMenuBundleID];
 	if (!self) {
 		return nil;
 	}
@@ -85,23 +85,6 @@
 	// Disable menu autoenabling
 	[extraMenu setAutoenablesItems:NO];
 
-	// Set the menu extra view up
-    extraView = [[MenuMeterDiskView alloc] initWithFrame:[[self view] frame] menuExtra:self];
-	if (!extraView) {
-		return nil;
-	}
-    [self setView:extraView];
-
-	// Register for pref changes
-	[[NSDistributedNotificationCenter defaultCenter] addObserver:self
-														selector:@selector(configFromPrefs:)
-															name:kDiskMenuBundleID
-														  object:kPrefChangeNotification];
-	// Register for 10.10 theme changes
-	[[NSDistributedNotificationCenter defaultCenter] addObserver:self
-														selector:@selector(configFromPrefs:)
-															name:kAppleInterfaceThemeChangedNotification
-														  object:nil];
 
 	// And configure directly from prefs on first load
 	[self configFromPrefs:nil];
@@ -121,22 +104,6 @@
 
 } // initWithBundle
 
-- (void)willUnload {
-
-	// Unregister pref change notifications
-	[[NSDistributedNotificationCenter defaultCenter] removeObserver:self
-															   name:nil
-															 object:nil];
-
-	// Let the pref panel know we have been removed
-	[[NSDistributedNotificationCenter defaultCenter] postNotificationName:kDiskMenuBundleID
-																   object:kDiskMenuUnloadNotification];
-
-	// Let super do the rest
-    [super willUnload];
-
-} // willUnload
-
  // dealloc
 
 ///////////////////////////////////////////////////////////////
@@ -146,6 +113,7 @@
 ///////////////////////////////////////////////////////////////
 
 - (NSImage *)image {
+    [self setupAppearance];
 
 	// Switch on state
 	switch (displayedActivity) {
@@ -192,6 +160,8 @@
 		[item setRepresentedObject:[[diskSpaceData objectAtIndex:i] objectForKey:@"path"]];
 		[item setTarget:self];
 	}
+    [extraMenu addItem:[NSMenuItem separatorItem]];
+    [self addStandardMenuEntriesTo:extraMenu];
 
 	return extraMenu;
 
@@ -207,7 +177,7 @@
 	NSDictionary *stringAttributes = [NSDictionary dictionaryWithObjectsAndKeys:
 										fgMenuThemeColor,
 										NSForegroundColorAttributeName,
-										[NSFont systemFontOfSize:11.0f],
+                                        [NSFont monospacedDigitSystemFontOfSize:11.0f weight:NSFontWeightRegular],
 										NSFontAttributeName,
 										nil];
 
@@ -296,23 +266,25 @@
 		}
 
 		// Build the new image
-		NSImage *menuItemImage = [[NSImage alloc] initWithSize:NSMakeSize([volIcon size].width + 10 + (float)finalTextWidth,
-																		   [volIcon size].height)];
-		[menuItemImage lockFocus];
-		[volIcon compositeToPoint:NSMakePoint(0, 0) operation:NSCompositeSourceOver];
-		[(NSAttributedString *)[nameStrings objectAtIndex:i]
-				drawAtPoint:NSMakePoint(ceilf((float)[volIcon size].width) + 10,
-										ceilf((float)[volIcon size].height / 2))];
-		[(NSAttributedString *)[detailStrings objectAtIndex:i]
-				drawAtPoint:NSMakePoint(ceilf((float)[volIcon size].width) + 10 + (float)widestNameText + 15,
-										ceilf((float)[volIcon size].height / 2))];
-		[(NSAttributedString *)[usedStrings objectAtIndex:i]
-				drawAtPoint:NSMakePoint(ceilf((float)[volIcon size].width) + 10, 1)];
-		[(NSAttributedString *)[freeStrings objectAtIndex:i]
-				drawAtPoint:NSMakePoint(ceilf((float)[volIcon size].width) + 10 + (float)widestUsedSpaceText + 10, 1)];
-		[(NSAttributedString *)[totalStrings objectAtIndex:i]
-				drawAtPoint:NSMakePoint(ceilf((float)[volIcon size].width) + 10 + (float)widestUsedSpaceText + 10 + (float)widestFreeSpaceText + 10, 1)];
-		[menuItemImage unlockFocus];
+		NSImage *menuItemImage = [NSImage imageWithSize:NSMakeSize([volIcon size].width + 10 + (float)finalTextWidth,
+                                                                           [volIcon size].height)
+                                                        flipped:NO
+                                                 drawingHandler:^BOOL(NSRect dstRect) {
+                    [volIcon compositeToPoint:NSMakePoint(0, 0) operation:NSCompositeSourceOver];
+                    [(NSAttributedString *)[nameStrings objectAtIndex:i]
+                            drawAtPoint:NSMakePoint(ceilf((float)[volIcon size].width) + 10,
+                                                    ceilf((float)[volIcon size].height / 2))];
+                    [(NSAttributedString *)[detailStrings objectAtIndex:i]
+                            drawAtPoint:NSMakePoint(ceilf((float)[volIcon size].width) + 10 + (float)widestNameText + 15,
+                                                    ceilf((float)[volIcon size].height / 2))];
+                    [(NSAttributedString *)[usedStrings objectAtIndex:i]
+                            drawAtPoint:NSMakePoint(ceilf((float)[volIcon size].width) + 10, 1)];
+                    [(NSAttributedString *)[freeStrings objectAtIndex:i]
+                            drawAtPoint:NSMakePoint(ceilf((float)[volIcon size].width) + 10 + (float)widestUsedSpaceText + 10, 1)];
+                    [(NSAttributedString *)[totalStrings objectAtIndex:i]
+                            drawAtPoint:NSMakePoint(ceilf((float)[volIcon size].width) + 10 + (float)widestUsedSpaceText + 10 + (float)widestFreeSpaceText + 10, 1)];
+                    return YES;
+                }  ];
 		[itemImages addObject:menuItemImage];
 	}
 
@@ -406,11 +378,11 @@
 	[ourPrefs syncWithDisk];
 
 	// Handle menubar theme changes
-	fgMenuThemeColor = MenuItemTextColor();
+	fgMenuThemeColor = self.menuBarTextColor;
 	
 	// Decide on image set name prefix
 	NSString *imageSetNamePrefix = [kDiskImageSets objectAtIndex:[ourPrefs diskImageset]];
-	if (IsMenuMeterMenuBarDarkThemed()) {
+	if (self.isDark) {
 		imageSetNamePrefix = [kDiskDarkImageSets objectAtIndex:[ourPrefs diskImageset]];
 	}
 
@@ -426,7 +398,7 @@
 	readwriteImage = nil;
 
 	// Setup new images as overlays or basic images
-	float menubarHeight = (float)[extraView frame].size.height;
+    float menubarHeight = self.height;
 	if ([ourPrefs diskImageset] == kDiskArrowsImageSet) {
 		// Small disk arrow is an overlay on the boot disk icon
 		idleImage = [[NSImage alloc] initWithSize:NSMakeSize(kDiskViewWidth, menubarHeight)];
@@ -440,7 +412,7 @@
 		[bootDiskIcon compositeToPoint:NSMakePoint(0, (menubarHeight - kDiskViewWidth) / 2)
 							 operation:NSCompositeSourceOver];
 		[[[NSImage alloc] initWithContentsOfFile:
-		   [[self bundle] pathForResource:[imageSetNamePrefix stringByAppendingString:@"Read"]
+		   [[NSBundle mainBundle] pathForResource:[imageSetNamePrefix stringByAppendingString:@"Read"]
 								   ofType:@"tiff"]]
 			compositeToPoint:NSMakePoint(0, 0) operation:NSCompositeSourceOver];
 		[readImage unlockFocus];
@@ -450,7 +422,7 @@
 		[bootDiskIcon compositeToPoint:NSMakePoint(0, (menubarHeight - kDiskViewWidth) / 2)
 							 operation:NSCompositeSourceOver];
 		[[[NSImage alloc] initWithContentsOfFile:
-			[[self bundle]pathForResource:[imageSetNamePrefix stringByAppendingString:@"Write"]
+			[[NSBundle mainBundle]pathForResource:[imageSetNamePrefix stringByAppendingString:@"Write"]
 								   ofType:@"tiff"]]
 			compositeToPoint:NSMakePoint(0, 0) operation:NSCompositeSourceOver];
 		[writeImage unlockFocus];
@@ -460,7 +432,7 @@
 		[bootDiskIcon compositeToPoint:NSMakePoint(0, (menubarHeight - kDiskViewWidth) / 2)
 							 operation:NSCompositeSourceOver];
 		[[[NSImage alloc] initWithContentsOfFile:
-			[[self bundle]pathForResource:[imageSetNamePrefix stringByAppendingString:@"ReadWrite"]
+			[[NSBundle mainBundle]pathForResource:[imageSetNamePrefix stringByAppendingString:@"ReadWrite"]
 								   ofType:@"tiff"]]
 			compositeToPoint:NSMakePoint(0, 0) operation:NSCompositeSourceOver];
 		[readwriteImage unlockFocus];
@@ -511,18 +483,18 @@
 		[readwriteImage unlockFocus];
 	} else {
 		// Load the static images
-		idleImage = [[NSImage alloc] initWithContentsOfFile:[[self bundle]
+		idleImage = [[NSImage alloc] initWithContentsOfFile:[[NSBundle mainBundle]
 						pathForResource:[imageSetNamePrefix stringByAppendingString:@"Idle"] ofType:@"tiff"]];
-		readImage = [[NSImage alloc] initWithContentsOfFile:[[self bundle]
+		readImage = [[NSImage alloc] initWithContentsOfFile:[[NSBundle mainBundle]
 						pathForResource:[imageSetNamePrefix stringByAppendingString:@"Read"] ofType:@"tiff"]];
-		writeImage = [[NSImage alloc] initWithContentsOfFile:[[self bundle]
+		writeImage = [[NSImage alloc] initWithContentsOfFile:[[NSBundle mainBundle]
 						pathForResource:[imageSetNamePrefix stringByAppendingString:@"Write"] ofType:@"tiff"]];
-		readwriteImage = [[NSImage alloc] initWithContentsOfFile:[[self bundle]
+		readwriteImage = [[NSImage alloc] initWithContentsOfFile:[[NSBundle mainBundle]
 						pathForResource:[imageSetNamePrefix stringByAppendingString:@"ReadWrite"] ofType:@"tiff"]];
 	}
 
 	// Force initial update
-	[self timerFired:nil];
+    statusItem.button.image=self.image;
 } // configFromPrefs
 
 @end

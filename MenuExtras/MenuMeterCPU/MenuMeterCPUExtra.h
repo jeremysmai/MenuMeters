@@ -23,11 +23,9 @@
 
 #import <Cocoa/Cocoa.h>
 #import <Carbon/Carbon.h>
-#import "AppleUndocumented.h"
 #import "MenuMeters.h"
 #import "MenuMeterDefaults.h"
 #import "MenuMeterCPU.h"
-#import "MenuMeterCPUView.h"
 #import "MenuMeterCPUStats.h"
 #import "MenuMeterCPUTopProcesses.h"
 #import "MenuMeterUptime.h"
@@ -39,7 +37,6 @@
 
 	// Menu Extra necessities
 	NSMenu 							*extraMenu;
-    MenuMeterCPUView 				*extraView;
 	// Prefs object
 	MenuMeterDefaults				*ourPrefs;
 	// Info gatherers
@@ -52,15 +49,13 @@
 	float							menuWidth;
 	// Prerendered percentage text displays and their calculated width
 	float							percentWidth;
-	NSMutableArray					*singlePercentCache,
-									*splitUserPercentCache,
-									*splitSystemPercentCache;
 	// Historical data samples
 	NSMutableArray					*loadHistory;
 	// Cached colors and theme support
 	NSColor							*userColor,
 									*systemColor,
-									*fgMenuThemeColor;
+									*fgMenuThemeColor,
+                                    *temperatureColor;
 
 } // MenuMeterCPUExtra
 

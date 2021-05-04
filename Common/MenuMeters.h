@@ -21,6 +21,8 @@
 // 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 
+#import "MenuMetersMenuExtraBase.h"
+
 ///////////////////////////////////////////////////////////////
 //
 //	Bundle information
@@ -92,4 +94,4 @@
 #define kMenuDoubleIndentFormat			@"        %@"
 #define kMenuTripleIndentFormat			@"            %@"
 
-
+#define kBorderAlpha 0.8f

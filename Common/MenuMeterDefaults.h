@@ -32,6 +32,7 @@
 - (void)saveBoolPref:(NSString *)prefName value:(BOOL)value;
 #endif
 
++ (void)movePreferencesIfNecessary;
 + (MenuMeterDefaults*)sharedMenuMeterDefaults;
 
 // Pref read/write
@@ -46,12 +47,17 @@
 - (int)cpuHorizontalRows;
 - (int)cpuMenuWidth;
 - (BOOL)cpuAvgAllProcs;
+- (BOOL)cpuSumAllProcsPercent;
 - (BOOL)cpuAvgLowerHalfProcs;
 - (BOOL)cpuSortByUsage;
 - (BOOL)cpuPowerMate;
+- (BOOL)cpuShowTemperature;
 - (int)cpuPowerMateMode;
+- (int)cpuTemperatureUnit;
+- (NSString*)cpuTemperatureSensor;
 - (NSColor *)cpuSystemColor;
 - (NSColor *)cpuUserColor;
+- (NSColor *)cpuTemperatureColor;
 - (void)saveCpuInterval:(double)interval;
 - (void)saveCpuDisplayMode:(int)mode;
 - (void)saveCpuPercentDisplay:(int)mode;
@@ -60,12 +66,17 @@
 - (void)saveCpuHorizontalRows:(int)rows;
 - (void)saveCpuMenuWidth:(int)width;
 - (void)saveCpuAvgAllProcs:(BOOL)average;
+- (void)saveCpuSumAllProcsPercent:(BOOL)sum;
 - (void)saveCpuAvgLowerHalfProcs:(BOOL)average;
 - (void)saveCpuSortByUsage:(BOOL)sort;
 - (void)saveCpuPowerMate:(BOOL)active;
+- (void)saveCpuTemperature:(BOOL)show;
 - (void)saveCpuPowerMateMode:(int)mode;
 - (void)saveCpuSystemColor:(NSColor *)color;
 - (void)saveCpuUserColor:(NSColor *)color;
+- (void)saveCpuTemperatureColor:(NSColor *)color;
+- (void)saveCpuTemperatureUnit:(int)unit;
+- (void)saveCpuTemperatureSensor:(NSString*)name;
 
 // Disk menu prefs
 - (double)diskInterval;
@@ -114,6 +125,7 @@
 - (int)netScaleCalc;
 - (BOOL)netThroughputLabel;
 - (BOOL)netThroughput1KBound;
+- (BOOL)netThroughputBits;
 - (int)netGraphStyle;
 - (int)netGraphLength;
 - (NSColor *)netTransmitColor;
@@ -127,6 +139,7 @@
 - (void)saveNetScaleCalc:(int)calc;
 - (void)saveNetThroughputLabel:(BOOL)label;
 - (void)saveNetThroughput1KBound:(BOOL)bound;
+- (void)saveNetThroughputBits:(BOOL)bits;
 - (void)saveNetGraphStyle:(int)style;
 - (void)saveNetGraphLength:(int)length;
 - (void)saveNetTransmitColor:(NSColor *)color;

@@ -1,3 +1,4 @@
+"Open MenuMeters preferences" = "Open MenuMeters preferences";
 //	In the interest of improving localizability most strings in MenuMeters
 //	are exposed as NSString format strings, including the %1$, %2$ parameter placement
 //	convention. If localization requires different ordering of the parameters you
@@ -33,6 +34,10 @@
 // Format string for tasks and threads
 "%d tasks, %d threads" = "%1$d tasks, %2$d threads";
 
+// Core count / hyperthreading format strings
+" (%@ hyperthreads per core)" = " (%@ hyperthreads per core)";
+"%@%@ physical cores" = "%@%@ physical cores";
+
 // Load average title
 "Load Average (1m, 5m, 15m):" = "Load Average (1m, 5m, 15m):";
 
@@ -41,6 +46,10 @@
 // the format of the load average floats themselves (load average floats are
 // automatically localized by NSNumberFormatter)
 "%@, %@, %@" = "%1$@, %2$@, %3$@";
+
+// CPU power limit status
+"CPU power limit:" = "CPU power limit:";
+"speed %@%%, scheduler %@%%" = "speed %@%%, scheduler %@%%";
 
 // Open Process Viewer/Open Console
 "Open Process Viewer" = "Open Process Viewer";
@@ -68,7 +77,8 @@
 "KB" = "KB";
 "MB" = "MB";
 "GB" = "GB";
-
+"Memory Pressure:" = "Memory Pressure:";
+"%@%%\t(level %@)" = "%@%%\t(level %@)";
 //	In the interest of improving localizability most strings in MenuMeters
 //	are exposed as NSString format strings, including the %1$, %2$ parameter placement
 //	convention. If localization requires different ordering of the parameters you

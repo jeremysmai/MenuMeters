@@ -29,14 +29,16 @@
 
 // Widths of the various displays
 #define kCPUPercentDisplayBorderWidth		2
-#define kCPUThermometerDisplayWidth			10
+#define kCPUThermometerDisplayWidth			11.0f
 #define kCPUDisplayMultiProcGapWidth		5
+#define kCPULabelOnlyWidth         25
 
 // Menu item indexes
-#define kCPUUptimeInfoMenuIndex				3
-#define kCPUTaskInfoMenuIndex				5
-#define kCPULoadInfoMenuIndex				7
-#define kCPUProcessLabelMenuIndex           8
+#define kCPUUptimeInfoMenuIndex				4
+#define kCPUTaskInfoMenuIndex				6
+#define kCPULoadInfoMenuIndex				8
+#define kCPUPowerLimitInfoMenuIndex                10
+#define kCPUProcessLabelMenuIndex           11
 #define kCPUProcessMenuIndex                (kCPUProcessLabelMenuIndex + 1)
 
 ///////////////////////////////////////////////////////////////
@@ -54,13 +56,21 @@
 #define kCPUHorizontalRowsPref              @"CPUHorizontalRows"
 #define kCPUMenuWidthPref                   @"CPUMenuWidth"
 #define kCPUAvgAllProcsPref					@"CPUAverageMultiProcs"
+#define kCPUSumAllProcsPercentPref			@"CPUSumAllProcsPercent"
+// Note that "Lower Half" is now reused to show only physical cores
 #define kCPUAvgLowerHalfProcsPref			@"CPUAverageLowerHalfProcs"
 #define kCPUSortByUsagePref				    @"CPUSortByUsage"
 #define kCPUSystemColorPref					@"CPUSystemColor"
 #define kCPUUserColorPref					@"CPUUserColor"
 #define kCPUPowerMatePref					@"CPUPowerMate"
 #define kCPUPowerMateMode					@"CPUPowerMateMode"
-
+#define kCPUShowTemperature                 @"CPUTemperature"
+#define kCPUTemperatureColor                @"CPUTemperatureColor"
+#define kCPUTemperatureSensor                @"CPUTemperatureSensor"
+#define kCPUTemperatureSensorDefault                @"CPUTemperatureSensorDefault"
+#define kCPUTemperatureUnit                @"CPUTemperatureUnit"
+#define kCPUTemperatureUnitCelsius 0
+#define kCPUTemperatureUnitFahrenheit 1
 // Display modes
 enum {
 	kCPUDisplayPercent						= 1,
@@ -115,6 +125,9 @@ enum {
 // Multiproc averaging
 #define kCPUAvgAllProcsDefault				NO
 
+// Multiproc sum percentage
+#define kCPUSumAllProcsPercentDefault		NO
+
 // Least-utilized half of procs averaging
 #define kCPUAvgLowerHalfProcsDefault		NO
 
@@ -124,11 +137,16 @@ enum {
 // PowerMate
 #define kCPUPowerMateDefault				NO
 
+// Show CPU temperature
+#define kCPUShowTemperatureDefault          YES
+
 // Colors
 											// Maraschino
 #define kCPUSystemColorDefault				[NSColor colorWithDeviceRed:1.0f green:0.0f blue:0.0f alpha:1.0f]
 											// Midnight blue
 #define kCPUUserColorDefault				[NSColor colorWithDeviceRed:0.0f green:0.0f blue:0.5f alpha:1.0f]
+                                            // Orange
+#define kCPUTemperatureColorDefault         [NSColor colorWithDeviceRed:1.0f green:0.647f blue:0.0f alpha:1.0f]
 
 
 

@@ -24,7 +24,6 @@
 //
 
 #import "MenuMeterWorkarounds.h"
-#import "AppleUndocumented.h"
 
 // Declare NSProcessInfo version tests from 10.10
 #ifndef ELCAPITAN
@@ -133,35 +132,3 @@ __private_extern__ void LiveUpdateMenu(NSMenu *menu) {
 
 } // LiveUpdateMenu
 
-__private_extern__ BOOL IsMenuMeterMenuBarDarkThemed(void) {
-	// On 10.10 there is no documented API for theme, so we'll guess a couple of different ways.
-	BOOL isDark = NO;
-	NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
-	[defaults synchronize];
-	NSString *interfaceStyle = [defaults stringForKey:@"AppleInterfaceStyle"];
-    if (interfaceStyle && [interfaceStyle isEqualToString:@"Dark"]) {
-		isDark = YES;
-	}
-	return isDark;
-} // IsMenuMeterMenuBarDarkThemed
-
-__private_extern__ NSColor * MenuItemTextColor(void) {
-#ifndef __x86_64__
-	// Handle ShapeShifter themes using Carbon API. Probably not relevant anymore, but seems to
-	// work everywhere we need it.
-	RGBColor rgbThemeColor;
-	if (GetThemeTextColor(kThemeTextColorRootMenuActive, 24, true, &rgbThemeColor) == noErr) {
-		return [NSColor colorWithCalibratedRed:((float)rgbThemeColor.red / (float)0xFFFF)
-										 green:((float)rgbThemeColor.green / (float)0xFFFF)
-										  blue:((float)rgbThemeColor.blue / (float)0xFFFF)
-										 alpha:(float)1.0];
-	}
-#else
-	// Unfortunately, there's also no NSColor API to get unselected menu item text colors.
-	if (IsMenuMeterMenuBarDarkThemed()) {
-		return [NSColor whiteColor];
-	}
-#endif	
-	// Fallback
-	return [NSColor blackColor];
-} // MenuItemTextColor

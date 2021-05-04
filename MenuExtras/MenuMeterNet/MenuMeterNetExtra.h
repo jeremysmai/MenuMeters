@@ -23,11 +23,9 @@
 
 #import <Cocoa/Cocoa.h>
 #import <Carbon/Carbon.h>
-#import "AppleUndocumented.h"
 #import "MenuMeters.h"
 #import "MenuMeterDefaults.h"
 #import "MenuMeterNet.h"
-#import "MenuMeterNetView.h"
 #import "MenuMeterNetConfig.h"
 #import "MenuMeterNetStats.h"
 #import "MenuMeterNetPPP.h"
@@ -38,7 +36,6 @@
 
 	// Menu Extra necessities
 	NSMenu 							*extraMenu;
-    MenuMeterNetView 				*extraView;
 	// Pref object
 	MenuMeterDefaults				*ourPrefs;
 	// Info gatherers/controllers
@@ -47,8 +44,6 @@
 	MenuMeterNetPPP					*pppControl;
 	// Formatters for localization
 	NSNumberFormatter				*bytesFormatter, *prettyIntFormatter;
-	// Localizable strings
-	NSDictionary					*localizedStrings;
 	// Cached colors
 	NSColor							*txColor, *rxColor, *inactiveColor;
 	// Cached bezier paths

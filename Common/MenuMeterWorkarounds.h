@@ -25,7 +25,6 @@
 
 #import <Cocoa/Cocoa.h>
 #import <Carbon/Carbon.h>
-#import "AppleUndocumented.h"
 
 // OS version info
 __private_extern__ BOOL OSIsJaguarOrLater(void);
@@ -39,8 +38,4 @@ __private_extern__ BOOL OSIsMavericksOrLater(void);
 __private_extern__ void LiveUpdateMenuItemTitleAndVisibility(NSMenu *, CFIndex, NSString *, BOOL);
 __private_extern__ void LiveUpdateMenuItemTitle(NSMenu *, CFIndex, NSString *);
 __private_extern__ void LiveUpdateMenu(NSMenu *);
-
-// Yosemite "Dark" Mode.
-__private_extern__ BOOL IsMenuMeterMenuBarDarkThemed(void);
-__private_extern__ NSColor * MenuItemTextColor(void);
 
